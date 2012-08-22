@@ -1,0 +1,11 @@
+--- model/waypoint-mobility-model.cc.orig	2011-08-01 12:32:23.110119531 +0200
++++ model/waypoint-mobility-model.cc	2011-08-01 12:32:11.620119199 +0200
+@@ -203,7 +203,7 @@
+ WaypointMobilityModel::EndMobility (void)
+ {
+   m_waypoints.clear ();
+-  m_current.time = Seconds (std::numeric_limits<double>::infinity ());
++  m_current.time = Time(std::numeric_limits<uint64_t>::infinity());
+   m_next.time = m_current.time;
+   m_first = true;
+ }

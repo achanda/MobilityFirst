@@ -1,0 +1,27 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    module = bld.create_ns3_module('gstar', ['internet', 'config-store', 'tools', 'point-to-point', 'wifi', 'mobility', 'applications', 'csma'])
+    module.includes = '.'
+    module.source = [
+        'model/gstar_header.cc',
+        'model/gstar-routing-protocol.cc',
+        'model/gstar_state.cc',
+        'helper/gstar-helper.cc',
+        ]
+
+    headers = bld.new_task_gen('ns3header')
+    headers.module = 'gstar'
+    headers.source = [
+        'model/gstar-routing-protocol.h',
+        'model/gstar_header.h',
+        'model/gstar_state.h',
+        'model/gstar_repositories.h',
+        'helper/gstar-helper.h',
+        ]
+
+
+    if bld.env['ENABLE_EXAMPLES']:
+        bld.add_subdirs('examples')
+
+    

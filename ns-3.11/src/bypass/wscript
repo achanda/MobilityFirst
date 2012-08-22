@@ -1,0 +1,34 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    module = bld.create_ns3_module('bypass', ['internet', 'config-store', 'tools', 'point-to-point', 'wifi', 'mobility', 'applications', 'csma'])
+    module.includes = '.'
+    module.source = [
+        'model/bypass.cc',
+	'model/bypass-header.cc',
+        #'model/mobilityfirst.cc',
+        #'model/gstar_state.cc',
+        #'model/gstar_protocol.cc',
+        #'model/hop_protocol.cc',
+        'helper/bypass-helper.cc',
+        ]
+
+    headers = bld.new_task_gen('ns3header')
+    headers.module = 'bypass'
+    headers.source = [
+        'model/bypass.h',
+	'model/bypass-header.h',
+        #'model/mf_header.h',
+        #'model/gstar_state.h',
+        #'model/gstar_protocol.h',
+        #'model/hop_protocol.h',
+        #'model/gstar_repositories.h',
+        #'model/hop_repositories.h',
+        'helper/bypass-helper.h',
+        ]
+
+
+    if bld.env['ENABLE_EXAMPLES']:
+        bld.add_subdirs('examples')
+
+    

@@ -1,0 +1,348 @@
+//      +-----+    +-----+    +-----+
+//      | UE0 |    | UE1 |    | UE2 |
+//      +-----+    +-----+    +-----+
+//     10.1.1.1   10.1.1.2   10.1.1.3
+//      --------  --------    -------
+//        ((*))    ((*))       ((*))
+//
+//                  10.1.1.4
+//               +------------+
+//               |eNB         | ==((*))
+//               +------------+
+
+#include "ns3/core-module.h"
+#include "ns3/network-module.h"
+#include "ns3/applications-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/config-store-module.h"
+#include "ns3/internet-module.h"
+#include "ns3/lte-module.h"
+#include <iostream>
+#include "ns3/global-route-manager.h"
+
+NS_LOG_COMPONENT_DEFINE ("lte-device");
+
+using namespace ns3;
+
+// registers all UE to all eNB
+void registerutoe(Ptr<UeNetDevice> ue[], Ptr<EnbNetDevice> enb[], int nue, int nenb)
+{
+    for (int i=0;i<nue;i++)
+    {
+        for(int j=0; j< nenb; j++)
+        {
+            ue[i]->SetTargetEnb(enb[j]);
+            enb[j]->GetUeManager ()->CreateUeRecord (ue[i], enb[j]);
+        }
+    }
+}
+
+// splits a string on a token
+std::vector<std::string> split(const std::string& strValue, char separator)
+{
+    std::vector<std::string> vecstrResult;
+    int startpos=0;
+    int endpos=0;
+    
+    endpos = strValue.find_first_of(separator, startpos);
+    while (endpos != -1)
+    {       
+        vecstrResult.push_back(strValue.substr(startpos, endpos-startpos)); // add to vector
+        startpos = endpos+1; //jump past sep
+        endpos = strValue.find_first_of(separator, startpos); // find next
+        if(endpos==-1)
+        {
+            std::string temp = strValue.substr(startpos);
+            temp.erase(remove_if(temp.begin(), temp.end(), isspace), temp.end()); // not really required
+            vecstrResult.push_back(temp);
+        }
+    }
+    return vecstrResult;
+}
+
+// to handle data file input
+class FileHandler {
+    const char* mName;
+    int mCount;
+    std::vector<std::string> data;
+    
+public:
+    FileHandler(const char *name)
+    {
+        mName = name;
+        mCount = 0;
+    }
+    void process()
+    {
+        std::ifstream myfile;
+        std::string line;
+        
+        myfile.open(mName);
+        
+        if(myfile.is_open()) {
+            while(getline(myfile, line)) {
+                data.push_back(line);
+            }
+            mCount = data.size();
+            myfile.close();
+        }
+        else {
+            std::cout << "Cannot open " << mName << std::endl;
+            return;
+        }
+    }
+    std::vector<std::string> serialize() {
+        std::vector<std::string> result;
+        std::vector<std::string> temp;
+        for(std::vector<std::string>::iterator it = data.begin(); it != data.end(); ++it) {
+            temp = split(*it, ',');
+            result.insert(result.end(), temp.begin(), temp.end());
+        }
+        return result;
+    }
+    int count()
+    {
+        return mCount;
+    }
+};
+
+
+int main (int argc, char *argv[])
+{
+    FileHandler fh("lte-towers-sfo.txt");
+    fh.process();
+    std::vector<std::string> data = fh.serialize(); // check if the strings have spaces
+    
+    std::vector<std::string> lats;
+    std::vector<std::string> longs;
+    
+    for (uint32_t i = 1; i< data.size() ;) 
+    {
+        lats.push_back(data[i]);
+        i = i + 3;
+    }
+    
+    for (uint32_t i = 2; i< data.size();)
+    {
+        longs.push_back(data[i]);
+        i = i + 3;
+    }
+    
+    std::cout << "Read data file" << std::endl;
+
+  // default values
+  int nbUE = 1;
+    int nenb = fh.count();
+
+  LteHelper lte;
+
+  //lte.EnableLogComponents ();
+  LogComponentEnable ("UdpClient", LOG_LEVEL_INFO);
+  LogComponentEnable ("UdpServer", LOG_LEVEL_INFO);
+
+
+  // CREATE NODE CONTAINER AND CREATE LTE NODES
+  NodeContainer ueNodes;
+  NodeContainer enbNodes;
+  ueNodes.Create (nbUE);
+  enbNodes.Create (nenb);
+
+
+  // CREATE DEVICE CONTAINER, INSTALL DEVICE TO NODE
+  NetDeviceContainer ueDevs, enbDevs;
+  ueDevs = lte.Install (ueNodes, LteHelper::DEVICE_TYPE_USER_EQUIPMENT);
+  enbDevs = lte.Install (enbNodes, LteHelper::DEVICE_TYPE_ENODEB);
+
+
+
+  // INSTALL INTERNET STACKS
+  InternetStackHelper stack;
+  stack.Install (ueNodes);
+  stack.Install (enbNodes);
+  Ipv4AddressHelper address;
+  address.SetBase ("10.1.1.0", "255.255.255.0");
+  Ipv4InterfaceContainer UEinterfaces = address.Assign (ueDevs);
+  Ipv4InterfaceContainer ENBinterface = address.Assign (enbDevs);
+
+std::cout << "Installed stack" << std::endl;
+
+  // MANAGE LTE NET DEVICES
+  Ptr<EnbNetDevice> enb[nenb];
+  Ptr<UeNetDevice> ue[nbUE];
+    for (int i = 0; i < nenb; i++)
+        enb[i] = enbDevs.Get(i)->GetObject<EnbNetDevice>();
+  for (int i = 0; i < nbUE; i++)
+      ue[i] = ueDevs.Get (i)->GetObject<UeNetDevice> ();
+    registerutoe(ue, enb, nbUE, nenb);
+
+    std::cout << "Registered" << std::endl;
+
+
+  // CONFIGURE DL and UL SUB CHANNELS
+  // Define a list of sub channels for the downlink
+  std::vector<int> dlSubChannels;
+  for (int i = 0; i < 25; i++)
+    {
+      dlSubChannels.push_back (i);
+    }
+  // Define a list of sub channels for the uplink
+  std::vector<int> ulSubChannels;
+  for (int i = 50; i < 100; i++)
+    {
+      ulSubChannels.push_back (i);
+    }
+    
+    for (int i = 0; i < nenb; i++)
+    {
+        enb[i]->GetPhy ()->SetDownlinkSubChannels (dlSubChannels);
+        enb[i]->GetPhy ()->SetUplinkSubChannels (ulSubChannels);
+    }
+
+  for (int i = 0; i < nbUE; i++)
+    {
+      ue[i]->GetPhy ()->SetDownlinkSubChannels (dlSubChannels);
+      ue[i]->GetPhy ()->SetUplinkSubChannels (ulSubChannels);
+    }
+
+    std::cout << "Subchannels" << std::endl;
+
+
+  // CONFIGURE MOBILITY
+  Ptr<ConstantPositionMobilityModel> enbMobility = CreateObject<ConstantPositionMobilityModel> ();
+    for (int i = 0; i< nenb; i++) {
+        enbMobility->SetPosition (Vector (atof(lats[i].c_str()), atof(longs[i].c_str()), 0.0));
+        lte.AddMobility (enb[i]->GetPhy (), enbMobility);
+    }
+
+  for (int i = 0; i < nbUE; i++)
+    {
+      Ptr<ConstantVelocityMobilityModel> ueMobility = CreateObject<ConstantVelocityMobilityModel> ();
+      ueMobility->SetPosition (Vector (30.0, 0.0, 0.0));
+      ueMobility->SetVelocity (Vector (30.0, 0.0, 0.0));
+
+      lte.AddMobility (ue[i]->GetPhy (), ueMobility);
+
+      lte.AddDownlinkChannelRealization (enbMobility, ueMobility, ue[i]->GetPhy ());
+    }
+
+    std::cout << "Mobility" << std::endl;
+
+
+  //******* FLOW N° 1 *********
+  /*UdpServerHelper udpServer_1;
+  ApplicationContainer serverApp_1;
+  UdpClientHelper udpClient_1;
+  ApplicationContainer clientApp_1;
+
+  udpServer_1 = UdpServerHelper (100);
+  serverApp_1 = udpServer_1.Install (ueNodes.Get (0));
+  serverApp_1.Start (Seconds (0.02));
+  serverApp_1.Stop (Seconds (2));
+
+  udpClient_1 = UdpClientHelper (UEinterfaces.GetAddress (0), 100);
+  udpClient_1.SetAttribute ("MaxPackets", UintegerValue (1200));
+  udpClient_1.SetAttribute ("Interval", TimeValue (Seconds (0.12)));
+  udpClient_1.SetAttribute ("PacketSize", UintegerValue (800));
+  clientApp_1 = udpClient_1.Install (enbNodes.Get (0));
+  clientApp_1.Start (Seconds (0.01));
+  clientApp_1.Stop (Seconds (2));
+
+  Ptr<RadioBearerInstance> bearer_1 = CreateObject<RadioBearerInstance> ();
+  bearer_1->SetBearerDirection (RadioBearerInstance::DIRECTION_TYPE_DL);
+  bearer_1->SetBearerType (RadioBearerInstance::BEARER_TYPE_DRB);
+  IpcsClassifierRecord *ipcs_1 = new IpcsClassifierRecord (UEinterfaces.GetAddress (0),
+                                                           "255.255.255.0",
+                                                           ENBinterface.GetAddress (0),
+                                                           "255.255.255.0",
+                                                           100, 100, 0, 10000, 17, 1);
+  bearer_1->SetIpcsClassifierRecord (ipcs_1);
+  //enb->GetRrcEntity ()->AddDownlinkNgbrBearer (bearer_1);
+
+
+
+
+
+  UdpServerHelper udpServer_2;
+  ApplicationContainer serverApp_2;
+  UdpClientHelper udpClient_2;
+  ApplicationContainer clientApp_2;
+
+  udpServer_2 = UdpServerHelper (100);
+  serverApp_2 = udpServer_2.Install (ueNodes.Get (1));
+  serverApp_2.Start (Seconds (0.02));
+  serverApp_2.Stop (Seconds (2));
+
+  udpClient_2 = UdpClientHelper (UEinterfaces.GetAddress (1), 100);
+  udpClient_2.SetAttribute ("MaxPackets", UintegerValue (1200));
+  udpClient_2.SetAttribute ("Interval", TimeValue (Seconds (0.12)));
+  udpClient_2.SetAttribute ("PacketSize", UintegerValue (800));
+  clientApp_2 = udpClient_2.Install (enbNodes.Get (0));
+  clientApp_2.Start (Seconds (0.011));
+  clientApp_2.Stop (Seconds (2));
+
+  Ptr<RadioBearerInstance> bearer_2 = CreateObject<RadioBearerInstance> ();
+  bearer_2->SetBearerDirection (RadioBearerInstance::DIRECTION_TYPE_DL);
+  bearer_2->SetBearerType (RadioBearerInstance::BEARER_TYPE_DRB);
+  IpcsClassifierRecord *ipcs_2 = new IpcsClassifierRecord (UEinterfaces.GetAddress (1),
+                                                           "255.255.255.0",
+                                                           ENBinterface.GetAddress (0),
+                                                           "255.255.255.0",
+                                                           100, 100, 0, 10000, 17, 1);
+  bearer_2->SetIpcsClassifierRecord (ipcs_2);
+  //enb->GetRrcEntity ()->AddDownlinkNgbrBearer (bearer_2);
+
+
+
+
+  UdpServerHelper udpServer_3;
+  ApplicationContainer serverApp_3;
+  UdpClientHelper udpClient_3;
+  ApplicationContainer clientApp_3;
+
+  udpServer_3 = UdpServerHelper (100);
+  serverApp_3 = udpServer_3.Install (ueNodes.Get (2));
+  serverApp_3.Start (Seconds (0.02));
+  serverApp_3.Stop (Seconds (2));
+
+  udpClient_3 = UdpClientHelper (UEinterfaces.GetAddress (2), 100);
+  udpClient_3.SetAttribute ("MaxPackets", UintegerValue (1200));
+  udpClient_3.SetAttribute ("Interval", TimeValue (Seconds (0.12)));
+  udpClient_3.SetAttribute ("PacketSize", UintegerValue (800));
+  clientApp_3 = udpClient_2.Install (enbNodes.Get (0));
+  clientApp_3.Start (Seconds (0.011));
+  clientApp_3.Stop (Seconds (2));
+
+  Ptr<RadioBearerInstance> bearer_3 = CreateObject<RadioBearerInstance> ();
+  bearer_3->SetBearerDirection (RadioBearerInstance::DIRECTION_TYPE_DL);
+  bearer_3->SetBearerType (RadioBearerInstance::BEARER_TYPE_DRB);
+  IpcsClassifierRecord *ipcs_3 = new IpcsClassifierRecord (UEinterfaces.GetAddress (2),
+                                                           "255.255.255.0",
+                                                           ENBinterface.GetAddress (0),
+                                                           "255.255.255.0",
+                                                           100, 100, 0, 10000, 17, 1);
+  bearer_3->SetIpcsClassifierRecord (ipcs_3);
+  //enb->GetRrcEntity ()->AddDownlinkNgbrBearer (bearer_3);
+    
+    for (int i=0;i < nenb; i++) {
+        enb[i] -> GetRrcEntity() -> AddDownlinkNgbrBearer(bearer_1);
+        enb[i] -> GetRrcEntity() -> AddDownlinkNgbrBearer(bearer_2);
+        enb[i] -> GetRrcEntity() -> AddDownlinkNgbrBearer(bearer_3);
+    }
+*/
+
+  std::cout << "Starting simulation....." << std::endl;
+  Simulator::Stop (Seconds (20.0));
+
+
+  Simulator::Run ();
+
+  Simulator::Destroy ();
+
+  //delete ipcs_1;
+  //delete ipcs_2;
+  //delete ipcs_3;
+
+  std::cout << "Done." << std::endl;
+
+  return 0;
+}

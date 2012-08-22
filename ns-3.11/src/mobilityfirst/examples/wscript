@@ -1,0 +1,62 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    obj = bld.create_ns3_program('simple-point-to-point-gstar',
+                                 ['point-to-point', 'internet', 'mobilityfirst', 'applications', 'wifi'])
+    obj.source = 'simple-point-to-point-gstar.cc'
+
+    obj = bld.create_ns3_program('simple-wifi-adhoc-gstar',
+                                 ['core', 'mobility','wifi','internet','mobilityfirst'])
+    obj.source = 'simple-wifi-adhoc-gstar.cc'
+
+    obj = bld.create_ns3_program('wifi_results',
+                                 ['core', 'mobility','wifi','internet','netanim','mobilityfirst'])
+    obj.source = 'wifi_results.cc'
+
+    obj = bld.create_ns3_program('wifi_results_3_flows',
+                                 ['core', 'mobility','wifi','netanim','internet','mobilityfirst'])
+    obj.source = 'wifi_results_3_flows.cc'
+
+    obj = bld.create_ns3_program('wifi_results_dest',
+                                 ['core', 'mobility','wifi','internet','mobilityfirst'])
+    obj.source = 'wifi_results_dest.cc'
+
+    obj = bld.create_ns3_program('dtn_results',
+                                 ['core', 'mobility','wifi','netanim','internet','mobilityfirst'])
+    obj.source = 'dtn_results.cc'
+
+    obj = bld.create_ns3_program('wifi_3',
+                                 ['core', 'mobility','wifi','internet','mobilityfirst'])
+    obj.source = 'wifi_3.cc'
+
+    obj = bld.create_ns3_program('mixed_topology',
+                                 ['core', 'mobility','wifi','internet','mobilityfirst'])
+    obj.source = 'mixed_topology.cc'
+
+    obj = bld.create_ns3_program('wireless_dtn',
+                                 ['core', 'mobility','wifi','internet','mobilityfirst'])
+    obj.source = 'wireless_dtn.cc'
+
+    obj = bld.create_ns3_program('wireless_dtn_static',
+                                 ['core', 'mobility','wifi','internet','mobilityfirst'])
+    obj.source = 'wireless_dtn_static.cc'
+
+    obj = bld.create_ns3_program('wifi_try',
+                                 ['core', 'mobility','wifi','internet','mobilityfirst','lte'])
+    obj.source = 'wifi_try.cc'
+
+    obj = bld.create_ns3_program('lte-wifi',
+                                 ['core', 'mobility','wifi','internet','mobilityfirst','lte'])
+    obj.source = 'lte-wifi.cc'
+
+    obj = bld.create_ns3_program('wimax-wifi',
+                                 ['core', 'mobility','wifi','internet','mobilityfirst','wimax','visualizer'])
+    obj.source = 'wimax-wifi.cc'
+
+    #obj = bld.create_ns3_program('randomwaypoint',
+    #                             ['core', 'mobility','wifi','internet','mobilityfirst','flow-monitor'])
+    #obj.source = 'randomwaypoint.cc'
+
+    obj = bld.create_ns3_program('sfo-trace',
+                                 ['core', 'mobility','wifi','internet','mobilityfirst'])
+    obj.source = 'sfo-trace.cc'

@@ -1,0 +1,42 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    obj = bld.create_ns3_program('test',
+                                 ['point-to-point', 'internet', 'bypass', 'applications', 'wifi'])
+    obj.source = 'test.cc'
+
+    obj = bld.create_ns3_program('two',
+				['point-to-point', 'internet', 'bypass', 'applications', 'wifi'])
+    obj.source = 'two.cc'
+
+    obj = bld.create_ns3_program('test-mixed',
+				['point-to-point', 'internet', 'bypass', 'applications', 'wifi'])
+    obj.source = 'test-mixed.cc'
+
+    obj = bld.create_ns3_program('wired-new',
+				['point-to-point', 'internet', 'bypass', 'applications', 'wifi'])
+    obj.source = 'wired-new.cc'
+
+    obj = bld.create_ns3_program('mixed-new',
+				['point-to-point', 'internet', 'bypass', 'applications', 'wifi'])
+    obj.source = 'mixed-new.cc'
+
+    obj = bld.create_ns3_program('one',
+				['point-to-point', 'internet', 'bypass', 'applications', 'wifi'])
+    obj.source = 'one.cc'
+
+    #obj = bld.create_ns3_program('full-wireless',
+	#			['point-to-point', 'internet', 'bypass', 'applications', 'wifi'])
+    #obj.source = 'full-wireless.cc'
+
+    obj = bld.create_ns3_program('tcp_wired',
+				['point-to-point', 'internet', 'bypass', 'applications', 'wifi', 'flow-monitor'])
+    obj.source = 'tcp_wired.cc'
+
+    obj = bld.create_ns3_program('tcp_wireless',
+				['point-to-point', 'internet', 'bypass', 'applications', 'wifi', 'flow-monitor'])
+    obj.source = 'tcp_wireless.cc'
+
+    obj = bld.create_ns3_program('tcp_mixed',
+				['point-to-point', 'internet', 'bypass', 'applications', 'wifi', 'flow-monitor'])
+    obj.source = 'tcp_mixed.cc'
